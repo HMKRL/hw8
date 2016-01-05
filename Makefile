@@ -1,0 +1,7 @@
+P=hw8
+OBJECTS=
+CFLAGS=-g -Wall
+LDLIBS=
+CC=gcc
+
+$P:$(OBJECTS)
