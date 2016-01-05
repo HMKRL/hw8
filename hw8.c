@@ -1,6 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+struct ip {
+	unsigned int address;
+	unsigned int length;
+	struct ip *big;
+	struct ip *small;
+};
+
+typedef struct ip IP;
+
 //prototype
 inline unsigned long long int rdtsc();
 
