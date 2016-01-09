@@ -14,22 +14,23 @@ typedef unsigned int ui;
 //prototype
 inline unsigned long long int rdtsc();
 ui bingen(ui[]);
-int sigbit(ui, ui);
+ui sigbit(ui, ui);
 IP* insert_node(IP*, ui, ui);
 IP* LPM_search(IP*, ui);
 void IPdecode(IP*, FILE*);
 IP* delete_node(IP*, ui, ui);
 void free_list(IP*);
+void print_list(IP*, FILE*);
 
 //global variables
 unsigned long long int begin, end;
 
 int main() {
 	FILE *origin, *search, *insert, *delete, *result, *timing;
-	ui pow_two = 1, ip[5], ipbin, bin_12, bin_8;
-	int i, sig;
-	char temp[19];
-	IP *matched;
+	ui pow_two = 1, ip[5], ipbin = 0, bin_12 = 0, bin_8 = 0, sig = 0;
+	int i;
+	char temp[21];
+	IP *matched = NULL;
 
 //open files
 	origin = fopen("IPv4_400k.txt", "r");
@@ -52,7 +53,7 @@ int main() {
 		seg_table3[i] = NULL;
 	}
 
-	while(fgets(temp, 19, origin) != NULL) { //create data structure
+	while(fgets(temp, 21, origin) != NULL) { //create data structure
 		sscanf(temp, "%u.%u.%u.%u/%u", &ip[0], &ip[1], &ip[2], &ip[3], &ip[4]);
 		ipbin = bingen(ip);
 		sig = sigbit(ipbin, ip[4]);
@@ -67,14 +68,23 @@ int main() {
 			exit(1);
 		}
 	}
-	
+
+	for(i = 0; i < 1 << 8;i++) {
+		print_list(seg_table1[i], timing);
+		fprintf(timing, "==============================\n");
+	}
+	for(i = 0;i < 1 << 12;i++) {
+		print_list(seg_table2[i], timing);
+		fprintf(timing, "==============================\n");
+		print_list(seg_table3[i], timing);
+	}
 //	fprintf(timing, "search");
-	while(fgets(temp, 16, search) != NULL) { //search
+	while(fgets(temp, 21, search) != NULL) { //search
 		begin = rdtsc();
 		sscanf(temp, "%u.%u.%u.%u", &ip[0], &ip[1], &ip[2], &ip[3]);
 		ipbin = bingen(ip);
-		bin_12 = sigbit(ipbin, 16);
-		bin_8 = sigbit(ipbin, 0);
+		bin_12 = sigbit(ipbin, 24);
+		bin_8 = sigbit(ipbin, 8);
 		
 		matched = LPM_search(seg_table3[bin_12], ipbin);
 		if(matched == NULL)
@@ -89,7 +99,7 @@ int main() {
 //	fprintf(timing, "\n");
 
 //	fprintf(timing, "insert");
-	while(fgets(temp , 19, insert) != NULL) { //insert
+	while(fgets(temp , 21, insert) != NULL) { //insert
 		begin = rdtsc();
 		sscanf(temp, "%u.%u.%u.%u/%u", &ip[0], &ip[1], &ip[2], &ip[3], &ip[4]);
 		ipbin = bingen(ip);
@@ -110,7 +120,7 @@ int main() {
 //	fprintf(timing, "\n");
 
 //	fprintf(timing, "delete");
-	while(fgets(temp, 19, delete) != NULL) { //delete
+	while(fgets(temp, 21, delete) != NULL) { //delete
 		begin = rdtsc();
 		sscanf(temp, "%u.%u.%u.%u/%u", &ip[0], &ip[1], &ip[2], &ip[3], &ip[4]);
 		ipbin = bingen(ip);
@@ -126,7 +136,7 @@ int main() {
 			exit(1);
 		}
 		end = rdtsc();
-		fprintf(timing, "%lld\n", end - begin);
+//		fprintf(timing, "%lld\n", end - begin);
 	}
 	
 //free total list
@@ -154,7 +164,7 @@ inline unsigned long long int rdtsc() {
 }
 
 ui bingen(ui ip[]) {
-	ui out = 0;
+	ui out = 0x00000000;
 	out |= (ip[0] << 24);
 	out |= (ip[1] << 16);
 	out |= (ip[2] << 8);
@@ -163,7 +173,7 @@ ui bingen(ui ip[]) {
 	return out;
 }
 
-int sigbit(ui ipbin, ui sig) {
+ui sigbit(ui ipbin, ui sig) {
 	if(sig >= 16)
 		return (ipbin >> 20);
 	else
@@ -178,8 +188,12 @@ IP* insert_node(IP *head, ui add, ui len) {
 	if(head == NULL) {
 		return newnode;
 	}
+	if(head -> length <= len) {
+		newnode -> next = head;
+		return newnode;
+	}
 	while(temp -> next != NULL) {
-		if((temp -> next) -> length < len) {
+		if((temp -> next) -> length <= len) {
 			newnode -> next = temp -> next;
 			temp -> next = newnode;
 			return head;
@@ -260,4 +274,13 @@ void free_list(IP *head) {
 		free(to_free);
 		to_free = head;
 	}
+}
+
+void print_list(IP *head, FILE *timing) {
+	IP *temp = head;
+	while(temp != NULL) {
+		IPdecode(temp, timing);
+		temp = temp -> next;
+	}
+	return;
 }
