@@ -13,20 +13,21 @@ typedef unsigned int ui;
 
 //prototype
 inline unsigned long long int rdtsc();
-
-//global variables
-unsigned long long int begin, end;
 ui bingen(ui[]);
 int sigbit(ui, ui);
 IP* insert_node(IP*, ui, ui);
-IP* create_node(ui, ui);
+IP* LPM_search(IP*, ui);
+void IPdecode(IP*, FILE*);
+
+//global variables
+unsigned long long int begin, end;
 
 int main() {
 	FILE *origin, *search, *insert, *delete, *result;
-	ui pow_two = 1, ip[5], ipbin;
+	ui pow_two = 1, ip[5], ipbin, bin_12, bin_8;
 	int i, sig;
 	char temp[19];
-	IP *head;
+	IP *matched;
 
 //open files
 	origin = fopen("IPv4_400k.txt", "r");
@@ -48,7 +49,7 @@ int main() {
 		seg_table3[i] = NULL;
 	}
 
-	while(fgets(temp, 19, origin) != NULL) {
+	while(fgets(temp, 19, origin) != NULL) { //create data structure
 		sscanf(temp, "%u.%u.%u.%u/%u", &ip[0], &ip[1], &ip[2], &ip[3], &ip[4]);
 		ipbin = bingen(ip);
 		sig = sigbit(ipbin, ip[4]);
@@ -64,6 +65,20 @@ int main() {
 		}
 	}
 
+	while(fgets(temp, 16, search) != NULL) {
+		sscanf(temp, "%u.%u.%u.%u", &ip[0], &ip[1], &ip[2], &ip[3]);
+		ipbin = bingen(ip);
+		bin_12 = sigbit(ipbin, 16);
+		bin_8 = sigbit(ipbin, 0);
+
+		matched = LPM_search(seg_table3[bin_12], ipbin);
+		if(matched == NULL)
+			matched = LPM_search(seg_table2[bin_12], ipbin);
+		if(matched == NULL)
+			matched = LPM_search(seg_table1[bin_8], ipbin);
+
+		IPdecode(matched, result);
+	}
 	fclose(origin);
 	fclose(insert);
 	fclose(search);
@@ -115,4 +130,41 @@ IP* insert_node(IP *head, ui add, ui len) {
 	}
 	temp -> next = newnode;
 	return head;
+}
+
+IP* LPM_search(IP *head, ui tosearch) {
+	ui old, new;
+	IP *temp = head;
+	while(temp != NULL) {
+		old = (temp -> address) >> (32 - temp -> length);
+		new = tosearch >> (32 - temp -> length);
+		if(old == new) {
+			break;
+		}
+		else {
+			temp = temp -> next;
+		}
+	}
+
+	return temp;
+}
+
+void IPdecode(IP *match, FILE *result) {
+	if(match != NULL) {
+		ui bin = match -> address;
+		ui ip[4], length;
+		ip[0] = bin >> 24;
+		bin &= 0x0FFF;
+		ip[1] = bin >> 16;
+		bin &= 0x00FF;
+		ip[2] = bin >> 8;
+		bin &= 0x000F;
+		ip[3] = bin;
+		length = match -> length;
+		fprintf(result, "%u.%u.%u.%u/%u\n", ip[0], ip[1], ip[2], ip[3], length);
+	}
+	else {
+		fprintf(result, "%s", "0.0.0.0/0\n");
+	}
+	return;
 }
