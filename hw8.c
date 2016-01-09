@@ -154,11 +154,11 @@ void IPdecode(IP *match, FILE *result) {
 		ui bin = match -> address;
 		ui ip[4], length;
 		ip[0] = bin >> 24;
-		bin &= 0x0FFF;
+		bin &= 0x00FFFFFF;
 		ip[1] = bin >> 16;
-		bin &= 0x00FF;
+		bin &= 0x0000FFFF;
 		ip[2] = bin >> 8;
-		bin &= 0x000F;
+		bin &= 0x000000FF;
 		ip[3] = bin;
 		length = match -> length;
 		fprintf(result, "%u.%u.%u.%u/%u\n", ip[0], ip[1], ip[2], ip[3], length);
