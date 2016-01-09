@@ -18,6 +18,7 @@ int sigbit(ui, ui);
 IP* insert_node(IP*, ui, ui);
 IP* LPM_search(IP*, ui);
 void IPdecode(IP*, FILE*);
+IP* delete_node(IP*, ui, ui);
 
 //global variables
 unsigned long long int begin, end;
@@ -65,20 +66,53 @@ int main() {
 		}
 	}
 
-	while(fgets(temp, 16, search) != NULL) {
+	while(fgets(temp, 16, search) != NULL) { //search
 		sscanf(temp, "%u.%u.%u.%u", &ip[0], &ip[1], &ip[2], &ip[3]);
 		ipbin = bingen(ip);
 		bin_12 = sigbit(ipbin, 16);
 		bin_8 = sigbit(ipbin, 0);
-
+		
 		matched = LPM_search(seg_table3[bin_12], ipbin);
 		if(matched == NULL)
 			matched = LPM_search(seg_table2[bin_12], ipbin);
 		if(matched == NULL)
 			matched = LPM_search(seg_table1[bin_8], ipbin);
-
+		
 		IPdecode(matched, result);
 	}
+
+	while(fgets(temp , 19, insert) != NULL) { //insert
+		sscanf(temp, "%u.%u.%u.%u/%u", &ip[0], &ip[1], &ip[2], &ip[3], &ip[4]);
+		ipbin = bingen(ip);
+		sig = sigbit(ipbin, ip[4]);
+		if(ip[4] >= 8 && ip[4] < 16)
+			seg_table1[sig] = insert_node(seg_table1[sig], ipbin, ip[4]);
+		else if(ip[4] >= 16 && ip[4] < 25)
+			seg_table2[sig] = insert_node(seg_table2[sig], ipbin, ip[4]);
+		else if(ip[4] >= 25 && ip[4] <= 32)
+			seg_table3[sig] = insert_node(seg_table3[sig], ipbin, ip[4]);
+		else if(ip[4] != 0 && ipbin != 0) {
+			printf("Error in input data.");
+			exit(1);
+		}
+	}
+
+	while(fgets(temp, 19, delete) != NULL) { //delete
+		sscanf(temp, "%u.%u.%u.%u/%u", &ip[0], &ip[1], &ip[2], &ip[3], &ip[4]);
+		ipbin = bingen(ip);
+		sig = sigbit(ipbin, ip[4]);
+		if(ip[4] >= 8 && ip[4] < 16)
+			seg_table1[sig] = delete_node(seg_table1[sig], ipbin, ip[4]);
+		else if(ip[4] >= 16 && ip[4] < 25)
+			delete_node(seg_table2[sig], ipbin, ip[4]);
+		else if(ip[4] >= 25 && ip[4] <= 32)
+			delete_node(seg_table3[sig], ipbin, ip[4]);
+		else if(ip[4] != 0 && ipbin != 0) {
+			printf("Error in input data.");
+			exit(1);
+		}
+	}
+
 	fclose(origin);
 	fclose(insert);
 	fclose(search);
@@ -167,4 +201,28 @@ void IPdecode(IP *match, FILE *result) {
 		fprintf(result, "%s", "0.0.0.0/0\n");
 	}
 	return;
+}
+
+IP* delete_node(IP *head, ui add, ui len) {
+	IP *temp = head, *to_free;
+	if(head == NULL)
+		return head;
+	if(head -> address == add && head -> length == len) {
+		to_free = head;
+		head = head -> next;
+		free(to_free);
+		return head;
+	}
+	while(temp -> next != NULL) {
+		if((temp -> next) -> address == add && (temp -> next) -> length == len) {
+			to_free = temp -> next;
+			temp -> next = (temp -> next) -> next;
+			free(to_free);
+			return head;
+		}
+		else
+			temp = temp -> next;
+	}
+
+	return head;
 }
