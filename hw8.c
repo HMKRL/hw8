@@ -19,12 +19,13 @@ IP* insert_node(IP*, ui, ui);
 IP* LPM_search(IP*, ui);
 void IPdecode(IP*, FILE*);
 IP* delete_node(IP*, ui, ui);
+void free_list(IP*);
 
 //global variables
 unsigned long long int begin, end;
 
 int main() {
-	FILE *origin, *search, *insert, *delete, *result;
+	FILE *origin, *search, *insert, *delete, *result, *timing;
 	ui pow_two = 1, ip[5], ipbin, bin_12, bin_8;
 	int i, sig;
 	char temp[19];
@@ -36,6 +37,7 @@ int main() {
 	insert = fopen("IPv4_insert.txt", "r");
 	delete = fopen("IPv4_delete.txt", "r");
 	result = fopen("result.txt", "w");
+	timing = fopen("timing.csv", "w");
 
 //make segmentation tables
 	IP *seg_table1[pow_two << 8];
@@ -65,8 +67,10 @@ int main() {
 			exit(1);
 		}
 	}
-
+	
+//	fprintf(timing, "search");
 	while(fgets(temp, 16, search) != NULL) { //search
+		begin = rdtsc();
 		sscanf(temp, "%u.%u.%u.%u", &ip[0], &ip[1], &ip[2], &ip[3]);
 		ipbin = bingen(ip);
 		bin_12 = sigbit(ipbin, 16);
@@ -79,9 +83,14 @@ int main() {
 			matched = LPM_search(seg_table1[bin_8], ipbin);
 		
 		IPdecode(matched, result);
+		end = rdtsc();
+//		fprintf(timing, "%lld\n", end - begin);
 	}
+//	fprintf(timing, "\n");
 
+//	fprintf(timing, "insert");
 	while(fgets(temp , 19, insert) != NULL) { //insert
+		begin = rdtsc();
 		sscanf(temp, "%u.%u.%u.%u/%u", &ip[0], &ip[1], &ip[2], &ip[3], &ip[4]);
 		ipbin = bingen(ip);
 		sig = sigbit(ipbin, ip[4]);
@@ -95,9 +104,14 @@ int main() {
 			printf("Error in input data.");
 			exit(1);
 		}
+		end = rdtsc();
+//		fprintf(timing, "%lld\n", end - begin);
 	}
+//	fprintf(timing, "\n");
 
+//	fprintf(timing, "delete");
 	while(fgets(temp, 19, delete) != NULL) { //delete
+		begin = rdtsc();
 		sscanf(temp, "%u.%u.%u.%u/%u", &ip[0], &ip[1], &ip[2], &ip[3], &ip[4]);
 		ipbin = bingen(ip);
 		sig = sigbit(ipbin, ip[4]);
@@ -111,6 +125,17 @@ int main() {
 			printf("Error in input data.");
 			exit(1);
 		}
+		end = rdtsc();
+		fprintf(timing, "%lld\n", end - begin);
+	}
+	
+//free total list
+	for(i = 0;i < pow_two << 8;i++) {
+		free_list(seg_table1[i]);
+	}
+	for(i = 0;i < pow_two << 12;i++) {
+		free_list(seg_table2[i]);
+		free_list(seg_table3[i]);
 	}
 
 	fclose(origin);
@@ -118,6 +143,7 @@ int main() {
 	fclose(search);
 	fclose(delete);
 	fclose(result);
+	fclose(timing);
 	return 0;
 }
 	
@@ -225,4 +251,13 @@ IP* delete_node(IP *head, ui add, ui len) {
 	}
 
 	return head;
+}
+
+void free_list(IP *head) {
+	IP *to_free = head;
+	while(to_free != NULL) {
+		head = head -> next;
+		free(to_free);
+		to_free = head;
+	}
 }
